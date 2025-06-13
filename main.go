@@ -48,12 +48,27 @@ func (s *Server) Start() error {
 	return s.acceptLoop()
 }
 
+func (s *Server) rawMessageHandler(rawMsg []byte) error {
+	command, err := parseCommand(string(rawMsg))
+	if err != nil {
+		return err
+	}
+
+	switch v := command.(type) {
+	case SetCommand:
+		fmt.Println("Someone want to set a key, value pair", "key", v.key, "value", v.value)
+	}
+	return nil
+}
+
 // Manage connections
 func (s *Server) Loop() {
 	for {
 		select {
 		case rawMsg := <-s.msgChan:
-			fmt.Println(string(rawMsg))
+			if err := s.rawMessageHandler(rawMsg); err != nil {
+				slog.Error("Raw message error", "err", err)
+			}
 		case <-s.quitChan:
 			return
 		case peer := <-s.addPeerChan:

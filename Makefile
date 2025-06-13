@@ -4,3 +4,5 @@ build :
 run : build
 	@./bin/goredis
 
+test: 
+	@go test
