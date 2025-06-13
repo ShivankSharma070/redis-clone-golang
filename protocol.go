@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/tidwall/resp"
 )
@@ -28,10 +27,8 @@ func parseCommand(raw string) (Command, error) {
 			break
 		}
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
-		fmt.Printf("Read %s\n", v.Type())
-		fmt.Printf("Read %s\n", v.String())
 		switch v.Type() {
 		case resp.Array:
 			switch v.Array()[0].String() {
@@ -43,7 +40,8 @@ func parseCommand(raw string) (Command, error) {
 					key:   v.Array()[1].String(),
 					value: v.Array()[2].String(),
 				}, nil
-
+			default:
+				return nil, fmt.Errorf("Unkown type of command.")
 			}
 		default:
 			return nil, fmt.Errorf("Unkown type of command.")
