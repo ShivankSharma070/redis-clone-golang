@@ -70,7 +70,12 @@ func (s *Server) handleMessages(msg Message) error {
 
 	switch v := command.(type) {
 	case SetCommand:
-		s.kv.Set(v.key, v.value)
+		err :=s.kv.Set(v.key, v.value)
+		if err != nil {
+			slog.Error("Error setting key value pair", "err", err)
+		}
+		msg.peer.Write([]byte("successfull"))
+
 	case GetCommand:
 		value, present := s.kv.Get(v.key)
 		if !present { 
@@ -130,9 +135,12 @@ func main() {
 	}()
 	time.Sleep(2 * time.Second)
 
-	client := client.New("localhost:5001")
+	client, err := client.New("localhost:5001")
+	if err != nil {
+		slog.Error("Error creating a client", "err", err)
+	}
+	
 	for i := range 10 {
-		
 		err := client.Set(context.Background(), fmt.Sprintf("name_%d", i), fmt.Sprintf("Shivank_%d", i))
 		if err != nil {
 			slog.Error("Client err in set", "err", err)
@@ -144,6 +152,7 @@ func main() {
 		}
 
 	}
+	
 
 	select {} // Blocking }
 }
