@@ -23,6 +23,8 @@ type Server struct {
 	addPeerChan chan *Peer
 	quitChan    chan struct{}
 	msgChan     chan []byte
+
+	kv *KV
 }
 
 func NewServer(config Config) *Server {
@@ -36,6 +38,7 @@ func NewServer(config Config) *Server {
 		addPeerChan: make(chan *Peer),
 		quitChan:    make(chan struct{}),
 		msgChan:     make(chan []byte),
+		kv:          NewKV(),
 	}
 }
 
@@ -52,6 +55,7 @@ func (s *Server) Start() error {
 	return s.acceptLoop()
 }
 
+// Handle Incoming messages
 func (s *Server) rawMessageHandler(rawMsg []byte) error {
 	command, err := parseCommand(string(rawMsg))
 	if err != nil {
@@ -60,12 +64,19 @@ func (s *Server) rawMessageHandler(rawMsg []byte) error {
 
 	switch v := command.(type) {
 	case SetCommand:
-		fmt.Println("Someone want to set a key, value pair", "key", v.key, "value", v.value)
+		s.kv.Set(v.key, v.value)
+	case GetCommand:
+		value, present := s.kv.Get(v.key)
+		if !present { 
+			return fmt.Errorf("Get Command error, no such key exists")
+		}
+		fmt.Println(string(value))
 	}
+
 	return nil
 }
 
-// Manage connections
+//Manage connections
 func (s *Server) Loop() {
 	for {
 		select {
@@ -105,17 +116,20 @@ func (s *Server) handleConnection(conn net.Conn) {
 }
 
 func main() {
+	server := NewServer(Config{})
 	go func() {
-		server := NewServer(Config{})
 		log.Fatal(server.Start())
 	}()
-	time.Sleep(time.Second)
+	time.Sleep(2 * time.Second)
 
 	client := client.New("localhost:5001")
-	err := client.Set(context.Background(), "name", "Shivank")
-	if err != nil {
-		slog.Error("Client err in set", "err", err)
+	for i := range 10 {
+		err := client.Set(context.Background(), fmt.Sprintf("name_%d", i), fmt.Sprintf("Shivank_%d", i))
+		if err != nil {
+			slog.Error("Client err in set", "err", err)
+		}
 	}
 
-	select {} // Blocking
+	client.Get(context.Background(),"name_1")
+	select {} // Blocking }
 }

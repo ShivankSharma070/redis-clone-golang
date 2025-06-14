@@ -24,7 +24,6 @@ func (p *Peer) readLoop() error {
 		if err != nil {
 			return err
 		}
-
 		msgBuf := make([]byte, n)
 		copy(msgBuf, buf)
 		p.msgCh <- msgBuf

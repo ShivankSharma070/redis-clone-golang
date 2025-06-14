@@ -10,13 +10,17 @@ import (
 
 const (
 	CommandSet = "set"
+	CommandGet = "get"
 )
 
 type Command interface {
 }
 
 type SetCommand struct {
-	key, value string
+	key, value []byte
+}
+type GetCommand struct {
+	key []byte
 }
 
 func parseCommand(raw string) (Command, error) {
@@ -29,16 +33,28 @@ func parseCommand(raw string) (Command, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		switch v.Type() {
 		case resp.Array:
+			if len(v.Array()) == 0 {
+				return nil, fmt.Errorf("Emply array received")
+			}
+
 			switch v.Array()[0].String() {
+			case CommandGet:
+				if len(v.Array()) != 2 {
+					return nil, fmt.Errorf("Not enough number of argument in the get command")
+				}
+				return GetCommand{
+					key: v.Array()[1].Bytes(),
+				}, nil
 			case CommandSet:
 				if len(v.Array()) != 3 {
-					return nil, fmt.Errorf("Not enough number of argument in the command")
+					return nil, fmt.Errorf("Not enough number of argument in the set command")
 				}
 				return SetCommand{
-					key:   v.Array()[1].String(),
-					value: v.Array()[2].String(),
+					key:   v.Array()[1].Bytes(),
+					value: v.Array()[2].Bytes(),
 				}, nil
 			default:
 				return nil, fmt.Errorf("Unkown type of command.")
