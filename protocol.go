@@ -34,6 +34,7 @@ func parseCommand(raw string) (Command, error) {
 			return nil, err
 		}
 
+		// TODO: Handle all types
 		switch v.Type() {
 		case resp.Array:
 			if len(v.Array()) == 0 {

@@ -27,6 +27,7 @@ func (kv *KV) Get(key []byte) ([]byte, bool) {
 	defer func() {
 		kv.mu.RUnlock()
 	}()
+
 	data, ok := kv.data[string(key)]
 	return data, ok
 }

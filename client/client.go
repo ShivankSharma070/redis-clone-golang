@@ -21,6 +21,7 @@ func New(remoteAddr string) *Client {
 }
 
 func (c *Client) Set(ctx context.Context, key, value string) error {
+	// FIX: Optmize this, avoid making connection for every query
 	conn, err := net.Dial("tcp", c.addr)
 	if err != nil {
 		return err
@@ -50,6 +51,13 @@ func (c *Client) Get(ctx context.Context, key string) error {
 		return fmt.Errorf("failed to write command: %w", err)
 
 	}
+
+	b := make([]byte, 1024)
+	_, err = conn.Read(b)
+	if err != nil {
+		return fmt.Errorf("Error Reading from connection err : %s", err.Error())
+	}
+	fmt.Println(string(b))
 
 	return err
 }

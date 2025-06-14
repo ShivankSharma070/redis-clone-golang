@@ -16,13 +16,19 @@ const default_listen_Addr = ":5001"
 type Config struct {
 	listenAddr string
 }
+
+type Message struct {
+	data []byte
+	peer *Peer
+}
+
 type Server struct {
 	Config
 	ln          net.Listener
 	Peers       map[*Peer]bool // For managing connections
 	addPeerChan chan *Peer
 	quitChan    chan struct{}
-	msgChan     chan []byte
+	msgChan     chan Message
 
 	kv *KV
 }
@@ -37,7 +43,7 @@ func NewServer(config Config) *Server {
 		Peers:       make(map[*Peer]bool),
 		addPeerChan: make(chan *Peer),
 		quitChan:    make(chan struct{}),
-		msgChan:     make(chan []byte),
+		msgChan:     make(chan Message),
 		kv:          NewKV(),
 	}
 }
@@ -56,8 +62,8 @@ func (s *Server) Start() error {
 }
 
 // Handle Incoming messages
-func (s *Server) rawMessageHandler(rawMsg []byte) error {
-	command, err := parseCommand(string(rawMsg))
+func (s *Server) handleMessages(msg Message) error {
+	command, err := parseCommand(string(msg.data))
 	if err != nil {
 		return err
 	}
@@ -70,7 +76,8 @@ func (s *Server) rawMessageHandler(rawMsg []byte) error {
 		if !present { 
 			return fmt.Errorf("Get Command error, no such key exists")
 		}
-		fmt.Println(string(value))
+
+		msg.peer.Write(append(value, byte('\n')))
 	}
 
 	return nil
@@ -80,8 +87,8 @@ func (s *Server) rawMessageHandler(rawMsg []byte) error {
 func (s *Server) Loop() {
 	for {
 		select {
-		case rawMsg := <-s.msgChan:
-			if err := s.rawMessageHandler(rawMsg); err != nil {
+		case msg := <-s.msgChan:
+			if err := s.handleMessages(msg); err != nil {
 				slog.Error("Raw message error", "err", err)
 			}
 		case <-s.quitChan:
@@ -116,6 +123,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 }
 
 func main() {
+	// Connection to server in background
 	server := NewServer(Config{})
 	go func() {
 		log.Fatal(server.Start())
@@ -124,12 +132,18 @@ func main() {
 
 	client := client.New("localhost:5001")
 	for i := range 10 {
+		
 		err := client.Set(context.Background(), fmt.Sprintf("name_%d", i), fmt.Sprintf("Shivank_%d", i))
 		if err != nil {
 			slog.Error("Client err in set", "err", err)
 		}
+		
+		err= client.Get(context.Background(),fmt.Sprintf("name_%d",i))
+		if err != nil {
+			slog.Error("Client err in get", "err", err)
+		}
+
 	}
 
-	client.Get(context.Background(),"name_1")
 	select {} // Blocking }
 }
