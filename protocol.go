@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 
@@ -23,8 +22,8 @@ type GetCommand struct {
 	key []byte
 }
 
-func parseCommand(raw string) (Command, error) {
-	rd := resp.NewReader(bytes.NewBufferString(raw))
+func parseCommand(reader io.Reader) (Command, error) {
+	rd := resp.NewReader(reader)
 	for {
 		v, _, err := rd.ReadValue()
 		if err == io.EOF {

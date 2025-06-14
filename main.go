@@ -18,7 +18,7 @@ type Config struct {
 }
 
 type Message struct {
-	data []byte
+	data Command
 	peer *Peer
 }
 
@@ -62,13 +62,8 @@ func (s *Server) Start() error {
 }
 
 // Handle Incoming messages
-func (s *Server) handleMessages(msg Message) error {
-	command, err := parseCommand(string(msg.data))
-	if err != nil {
-		return err
-	}
-
-	switch v := command.(type) {
+func (s *Server) handleMessages(msg Message ) error {
+	switch v := msg.data.(type) {
 	case SetCommand:
 		err :=s.kv.Set(v.key, v.value)
 		if err != nil {
