@@ -5,4 +5,4 @@ build :
 	@go build -o bin/goredis
 
 test: 
-	@go test
+	@go test -v -count=1

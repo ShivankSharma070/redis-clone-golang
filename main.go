@@ -1,15 +1,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"log/slog"
 	"net"
 	"time"
-	"flag"
-
 )
-
 
 type Config struct {
 	listenAddr string
@@ -25,7 +23,6 @@ type Server struct {
 	ln          net.Listener
 	Peers       map[*Peer]bool // For managing connections
 	addPeerChan chan *Peer
-	quitChan    chan struct{}
 	msgChan     chan Message
 
 	kv *KV
@@ -36,7 +33,6 @@ func NewServer(config Config) *Server {
 		Config:      config,
 		Peers:       make(map[*Peer]bool),
 		addPeerChan: make(chan *Peer),
-		quitChan:    make(chan struct{}),
 		msgChan:     make(chan Message),
 		kv:          NewKV(),
 	}
@@ -56,10 +52,10 @@ func (s *Server) Start() error {
 }
 
 // Handle Incoming messages
-func (s *Server) handleMessages(msg Message ) error {
+func (s *Server) handleMessages(msg Message) error {
 	switch v := msg.data.(type) {
 	case SetCommand:
-		err :=s.kv.Set(v.key, v.value)
+		err := s.kv.Set(v.key, v.value)
 		if err != nil {
 			slog.Error("Error setting key value pair", "err", err)
 		}
@@ -67,17 +63,17 @@ func (s *Server) handleMessages(msg Message ) error {
 
 	case GetCommand:
 		value, present := s.kv.Get(v.key)
-		if !present { 
+		if !present {
 			return fmt.Errorf("Get Command error, no such key exists")
 		}
 
-		msg.peer.Write(append(value, byte('\n')))
+		msg.peer.Write(value)
 	}
 
 	return nil
 }
 
-//Manage connections
+// Manage connections
 func (s *Server) Loop() {
 	for {
 		select {
@@ -85,8 +81,6 @@ func (s *Server) Loop() {
 			if err := s.handleMessages(msg); err != nil {
 				slog.Error("Raw message error", "err", err)
 			}
-		case <-s.quitChan:
-			return
 		case peer := <-s.addPeerChan:
 			s.Peers[peer] = true
 		}
@@ -108,6 +102,10 @@ func (s *Server) acceptLoop() error {
 // Handling Connections
 func (s *Server) handleConnection(conn net.Conn) {
 	peer := NewPeer(conn, s.msgChan)
+	defer func() { 
+		peer.Write([]byte("Closing the connection"))
+		conn.Close() 
+	}()
 	s.addPeerChan <- peer
 	slog.Info("Peer conntected", "connection", conn.LocalAddr())
 	err := peer.readLoop()
@@ -124,11 +122,11 @@ func main() {
 	server := NewServer(Config{
 		listenAddr: *listenAddr,
 	})
+	time.Sleep(time.Second)
 	go func() {
+		defer func (){server.ln.Close()}()
 		log.Fatal(server.Start())
 	}()
-	time.Sleep(2 * time.Second)
 
-
-	select {} // Blocking }
+	select {} // Blocking
 }

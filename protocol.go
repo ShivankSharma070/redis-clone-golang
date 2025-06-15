@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"io"
+	"strings"
+	"errors"
 
 	"github.com/tidwall/resp"
 )
@@ -22,6 +24,8 @@ type GetCommand struct {
 	key []byte
 }
 
+var QUIT = errors.New("Quit")
+
 func parseCommand(reader io.Reader) (Command, error) {
 	rd := resp.NewReader(reader)
 	for {
@@ -40,24 +44,26 @@ func parseCommand(reader io.Reader) (Command, error) {
 				return nil, fmt.Errorf("Emply array received")
 			}
 
-			switch v.Array()[0].String() {
-			case CommandGet:
-				if len(v.Array()) != 2 {
-					return nil, fmt.Errorf("Not enough number of argument in the get command")
-				}
-				return GetCommand{
-					key: v.Array()[1].Bytes(),
-				}, nil
-			case CommandSet:
-				if len(v.Array()) != 3 {
-					return nil, fmt.Errorf("Not enough number of argument in the set command")
-				}
-				return SetCommand{
-					key:   v.Array()[1].Bytes(),
-					value: v.Array()[2].Bytes(),
-				}, nil
-			default:
-				return nil, fmt.Errorf("Unkown type of command.")
+			switch strings.ToLower(v.Array()[0].String()) {
+				case "quit",  "exit":
+					return nil, fmt.Errorf("Client requested %w",QUIT)
+				case CommandGet:
+					if len(v.Array()) != 2 {
+						return nil, fmt.Errorf("Not enough number of argument in the get command")
+					}
+					return GetCommand{
+						key: v.Array()[1].Bytes(),
+					}, nil
+				case CommandSet:
+					if len(v.Array()) != 3 {
+						return nil, fmt.Errorf("Not enough number of argument in the set command")
+					}
+					return SetCommand{
+						key:   v.Array()[1].Bytes(),
+						value: v.Array()[2].Bytes(),
+					}, nil
+				default:
+					return nil, fmt.Errorf("Array, but unkown type of array.")
 			}
 		default:
 			return nil, fmt.Errorf("Unkown type of command.")
