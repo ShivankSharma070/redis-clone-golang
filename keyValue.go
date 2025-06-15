@@ -1,6 +1,8 @@
 package main
 
-import "sync"
+import (
+	"sync"
+)
 
 type KV struct {
 	data map[string][]byte
@@ -18,6 +20,7 @@ func (kv *KV) Set(key []byte, value []byte) error {
 	defer func() {
 		kv.mu.Unlock()
 	}()
+
 	kv.data[string(key)] = []byte(value)
 	return nil
 }

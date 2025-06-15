@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"log/slog"
@@ -9,7 +8,6 @@ import (
 	"time"
 	"flag"
 
-	"github.com/ShivankSharma070/redis-clone-go/client"
 )
 
 
@@ -18,7 +16,7 @@ type Config struct {
 }
 
 type Message struct {
-	data []byte
+	data Command
 	peer *Peer
 }
 
@@ -58,15 +56,15 @@ func (s *Server) Start() error {
 }
 
 // Handle Incoming messages
-func (s *Server) handleMessages(msg Message) error {
-	command, err := parseCommand(string(msg.data))
-	if err != nil {
-		return err
-	}
-
-	switch v := command.(type) {
+func (s *Server) handleMessages(msg Message ) error {
+	switch v := msg.data.(type) {
 	case SetCommand:
-		s.kv.Set(v.key, v.value)
+		err :=s.kv.Set(v.key, v.value)
+		if err != nil {
+			slog.Error("Error setting key value pair", "err", err)
+		}
+		msg.peer.Write([]byte("successfull"))
+
 	case GetCommand:
 		value, present := s.kv.Get(v.key)
 		if !present { 
@@ -131,20 +129,6 @@ func main() {
 	}()
 	time.Sleep(2 * time.Second)
 
-	client := client.New("localhost:5001")
-	for i := range 10 {
-		
-		err := client.Set(context.Background(), fmt.Sprintf("name_%d", i), fmt.Sprintf("Shivank_%d", i))
-		if err != nil {
-			slog.Error("Client err in set", "err", err)
-		}
-		
-		err= client.Get(context.Background(),fmt.Sprintf("name_%d",i))
-		if err != nil {
-			slog.Error("Client err in get", "err", err)
-		}
-
-	}
 
 	select {} // Blocking }
 }

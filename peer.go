@@ -20,17 +20,13 @@ func (p *Peer) Write(data []byte) (int, error) {
 	return p.conn.Write(data)
 }
 func (p *Peer) readLoop() error {
-	// Reading data form a connection
-	buf := make([]byte, 1024)
 	for {
-		n, err := p.conn.Read(buf)
+		command, err := parseCommand(p.conn)
 		if err != nil {
 			return err
 		}
-		msgBuf := make([]byte, n)
-		copy(msgBuf, buf)
 		p.msgCh <- Message{
-			data: msgBuf,
+			data: command,
 			peer: p,
 		}
 	}
