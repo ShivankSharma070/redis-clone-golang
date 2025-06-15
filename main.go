@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"log/slog"
 	"net"
 	"time"
 
-	"github.com/ShivankSharma070/redis-clone-go/client"
 )
 
 const default_listen_Addr = ":5001"
@@ -130,24 +128,6 @@ func main() {
 	}()
 	time.Sleep(2 * time.Second)
 
-	client, err := client.New("localhost:5001")
-	if err != nil {
-		slog.Error("Error creating a client", "err", err)
-	}
-	
-	for i := range 10 {
-		err := client.Set(context.Background(), fmt.Sprintf("name_%d", i), fmt.Sprintf("Shivank_%d", i))
-		if err != nil {
-			slog.Error("Client err in set", "err", err)
-		}
-		
-		err= client.Get(context.Background(),fmt.Sprintf("name_%d",i))
-		if err != nil {
-			slog.Error("Client err in get", "err", err)
-		}
-
-	}
-	
 
 	select {} // Blocking }
 }
