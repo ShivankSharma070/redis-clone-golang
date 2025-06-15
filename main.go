@@ -7,11 +7,11 @@ import (
 	"log/slog"
 	"net"
 	"time"
+	"flag"
 
 	"github.com/ShivankSharma070/redis-clone-go/client"
 )
 
-const default_listen_Addr = ":5001"
 
 type Config struct {
 	listenAddr string
@@ -34,10 +34,6 @@ type Server struct {
 }
 
 func NewServer(config Config) *Server {
-	if len(config.listenAddr) == 0 {
-		config.listenAddr = default_listen_Addr
-	}
-
 	return &Server{
 		Config:      config,
 		Peers:       make(map[*Peer]bool),
@@ -123,8 +119,13 @@ func (s *Server) handleConnection(conn net.Conn) {
 }
 
 func main() {
+	listenAddr := flag.String("listenAddr", ":5001", "Address to start the server.")
+	flag.Parse()
+
 	// Connection to server in background
-	server := NewServer(Config{})
+	server := NewServer(Config{
+		listenAddr: *listenAddr,
+	})
 	go func() {
 		log.Fatal(server.Start())
 	}()
