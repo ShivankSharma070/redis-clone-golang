@@ -24,8 +24,8 @@ type Server struct {
 	Peers       map[*Peer]bool // For managing connections
 	addPeerChan chan *Peer
 	msgChan     chan Message
-
-	kv *KV
+	delPeerChan chan *Peer
+	kv          *KV
 }
 
 func NewServer(config Config) *Server {
@@ -34,6 +34,7 @@ func NewServer(config Config) *Server {
 		Peers:       make(map[*Peer]bool),
 		addPeerChan: make(chan *Peer),
 		msgChan:     make(chan Message),
+		delPeerChan: make(chan *Peer),
 		kv:          NewKV(),
 	}
 }
@@ -73,10 +74,13 @@ func (s *Server) handleMessages(msg Message) error {
 	return nil
 }
 
-// Manage connections
+// Manage channels
 func (s *Server) Loop() {
 	for {
 		select {
+		case p := <-s.delPeerChan:
+			slog.Info("Deleting peer")
+			delete(s.Peers, p)
 		case msg := <-s.msgChan:
 			if err := s.handleMessages(msg); err != nil {
 				slog.Error("Raw message error", "err", err)
@@ -101,10 +105,10 @@ func (s *Server) acceptLoop() error {
 
 // Handling Connections
 func (s *Server) handleConnection(conn net.Conn) {
-	peer := NewPeer(conn, s.msgChan)
-	defer func() { 
+	peer := NewPeer(conn, s.msgChan, s.delPeerChan)
+	defer func() {
 		peer.Write([]byte("Closing the connection"))
-		conn.Close() 
+		conn.Close()
 	}()
 	s.addPeerChan <- peer
 	slog.Info("Peer conntected", "connection", conn.LocalAddr())
@@ -124,9 +128,8 @@ func main() {
 	})
 	time.Sleep(time.Second)
 	go func() {
-		defer func (){server.ln.Close()}()
+		defer func() { server.ln.Close() }()
 		log.Fatal(server.Start())
 	}()
-
 	select {} // Blocking
 }

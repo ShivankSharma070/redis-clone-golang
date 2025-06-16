@@ -10,8 +10,8 @@ import (
 )
 
 type Client struct {
-	addr string
-	conn net.Conn
+	Addr string
+	Conn net.Conn
 }
 
 func New(remoteAddr string) (*Client, error) {
@@ -20,24 +20,22 @@ func New(remoteAddr string) (*Client, error) {
 		return nil, err
 	}
 	return &Client{
-		addr: remoteAddr,
-		conn : myconn,
+		Addr: remoteAddr,
+		Conn: myconn,
 	}, nil
 }
 
 func (c *Client) Set(ctx context.Context, key, value string) error {
-	// FIX: Optmize this, avoid making connection for every query
-
 	var buf bytes.Buffer
 	wr := resp.NewWriter(&buf)
 	wr.WriteArray([]resp.Value{resp.StringValue("set"), resp.StringValue(key), resp.StringValue(value)})
-	_, err := c.conn.Write(buf.Bytes())
+	_, err := c.Conn.Write(buf.Bytes())
 	if err != nil {
 		return fmt.Errorf("failed to write command: %w", err)
 	}
 
 	b := make([]byte, 1024)
-	_, err = c.conn.Read(b)
+	_, err = c.Conn.Read(b)
 	if err != nil {
 		return fmt.Errorf("Error Reading from connection err : %s", err.Error())
 	}
@@ -50,14 +48,14 @@ func (c *Client) Get(ctx context.Context, key string) error {
 	var buf bytes.Buffer
 	wr := resp.NewWriter(&buf)
 	wr.WriteArray([]resp.Value{resp.StringValue("get"), resp.StringValue(key)})
-	_, err := c.conn.Write(buf.Bytes())
+	_, err := c.Conn.Write(buf.Bytes())
 	if err != nil {
 		return fmt.Errorf("failed to write command: %w", err)
 
 	}
 
 	b := make([]byte, 1024)
-	_, err = c.conn.Read(b)
+	_, err = c.Conn.Read(b)
 	if err != nil {
 		return fmt.Errorf("Error Reading from connection err : %s", err.Error())
 	}

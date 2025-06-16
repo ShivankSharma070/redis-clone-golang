@@ -1,20 +1,22 @@
 package main
 
 import (
-	"net"
 	"errors"
 	"log/slog"
+	"net"
 )
 
 type Peer struct {
-	conn  net.Conn
-	msgCh chan Message
+	conn    net.Conn
+	msgCh   chan Message
+	delChan chan *Peer
 }
 
-func NewPeer(conn net.Conn, msgChan chan Message) *Peer {
+func NewPeer(conn net.Conn, msgChan chan Message, delChan chan *Peer) *Peer {
 	return &Peer{
-		conn:  conn,
-		msgCh: msgChan,
+		conn:    conn,
+		msgCh:   msgChan,
+		delChan: delChan,
 	}
 }
 
@@ -24,7 +26,7 @@ func (p *Peer) Write(data []byte) (int, error) {
 
 func (p *Peer) readLoop() error {
 	for {
-		command, err := parseCommand(p.conn)
+		command, err := parseCommand(p.conn, p)
 
 		if errors.Is(err, QUIT) {
 			return err
