@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net"
 	"time"
+
+	"github.com/tidwall/resp"
 )
 
 type Config struct {
@@ -25,7 +27,7 @@ type Server struct {
 	addPeerChan chan *Peer
 	msgChan     chan Message
 	delPeerChan chan *Peer
-	kv          *KV
+	kv          *KV // Map to hold key-values pairs
 }
 
 func NewServer(config Config) *Server {
@@ -63,14 +65,20 @@ func (s *Server) handleMessages(msg Message) error {
 		msg.peer.Write([]byte("successfull"))
 
 	case GetCommand:
-		value, present := s.kv.Get(v.key)
-		if !present {
+		value, ok := s.kv.Get(v.key)
+		if !ok {
 			return fmt.Errorf("Get Command error, no such key exists")
 		}
-
 		msg.peer.Write(value)
-	}
 
+	case HelloCommand:
+		msg.peer.WriteMap(map[string]string{"server": "redis"})
+
+	case ClientCommand:
+		if err := resp.NewWriter(msg.peer.conn).WriteSimpleString("OK"); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
