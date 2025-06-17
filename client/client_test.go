@@ -11,6 +11,7 @@ import (
 	"github.com/tidwall/resp"
 )
 
+// Testing multiple clients
 func TestNewClients(t *testing.T) {
 	t.Log("Creating multiple clients")
 	wg := sync.WaitGroup{}
@@ -46,29 +47,29 @@ func TestNewClients(t *testing.T) {
 
 }
 
+// Official Redis client
 func TestRedisOfficialClient(t *testing.T) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:             "localhost:5001",
-		Password:         "", // no password set
-		DB:               0,  // use default DB
-		DisableIndentity: true,
+		Password:         "",   // no password set
+		DB:               0,    // use default DB
+		DisableIndentity: true, // This is a workaround as the redis client have some bug while validating response from server for Client Setinfo command. https://github.com/redis/go-redis/security/advisories/GHSA-92cp-5422-2mw7
 	})
 
-	fmt.Println("Sending set command")
-	err := rdb.Set(context.Background(), "name", "shivank", 0).Err()
+	// While sending each request redis send a hello and client setinfo command, which where causing some bug.
+	err := rdb.Set(context.Background(), "foo", "bar", 0).Err()
 	if err != nil {
-		fmt.Println("This is the error", err.Error())
 		panic(err)
 	}
 
-	fmt.Println("Sending get command")
-	val, err := rdb.Get(context.TODO(), "name").Result()
+	val, err := rdb.Get(context.TODO(), "foo").Result()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("name", val)
+	fmt.Println("foo", val)
 }
 
+// Writing a map in resp
 func TestMapWriting(t *testing.T) {
 	m := map[string]string{"foo": "bar"}
 	buf := &bytes.Buffer{}

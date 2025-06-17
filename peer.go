@@ -65,6 +65,7 @@ func (p *Peer) readLoop(ctx context.Context) error {
 	}
 	go runLoop()
 
+	// If context is cancelled, exit the function. otherwise keep looping.
 	for {
 		select {
 		case <-ctx.Done():

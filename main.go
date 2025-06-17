@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"log"
 	"log/slog"
 	"net"
@@ -119,6 +118,7 @@ func (s *Server) acceptLoop() error {
 	for {
 		conn, err := s.ln.Accept() // Blocking
 		if err != nil {
+			// If error is due to server shutdown, stop
 			if errors.Is(err, net.ErrClosed) {
 				slog.Info("Stop Accepting New requests")
 				return nil
@@ -130,14 +130,16 @@ func (s *Server) acceptLoop() error {
 	}
 }
 
-// Handling Connections
+// Handling Each Connections
 func (s *Server) handleConnection(conn net.Conn) {
 	peer := NewPeer(conn, s.msgChan, s.delPeerChan)
+
 	defer func() {
-		fmt.Println("Closing the connneciton")
+		slog.Info("Closing the connneciton")
 		peer.Write("Closing the connection")
 		conn.Close()
 	}()
+
 	s.addPeerChan <- peer
 	slog.Info("Peer conntected", "connection", conn.LocalAddr())
 	peer.readLoop(s.ctx)
@@ -147,6 +149,7 @@ func main() {
 	listenAddr := flag.String("listenAddr", ":5001", "Address to start the server.")
 	flag.Parse()
 
+	// Handle syscall to program
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
@@ -163,9 +166,10 @@ func main() {
 		}
 	}()
 
+	// Shutdown server
 	<-done
 	cancel()
 	slog.Info("Shutting down server..")
 	server.ln.Close()
-	time.Sleep(3 * time.Second)
+	time.Sleep(2 * time.Second)
 }

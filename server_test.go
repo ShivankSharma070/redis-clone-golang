@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -12,13 +13,14 @@ import (
 	"github.com/ShivankSharma070/redis-clone-go/client"
 )
 
+// Test server with multipe clients
 func TestNewServerWithClients(t *testing.T) {
 
 	listenAddr := flag.String("listenAddr", ":5001", "Address to start the server.")
 	flag.Parse()
 
 	// Connection to server in background
-	server := NewServer(Config{
+	server := NewServer(context.Background(), Config{
 		listenAddr: *listenAddr,
 	})
 	time.Sleep(time.Second)
@@ -44,13 +46,13 @@ func TestNewServerWithClients(t *testing.T) {
 			}()
 
 			t.Log("Setting value for client", i)
-			err = c.Set(context.Background(), fmt.Sprintf("name_%d", i), fmt.Sprintf("Shivank_%d", i))
+			err = c.Set(context.Background(), fmt.Sprintf("foo_%d", i), fmt.Sprintf("bar_%d", i))
 			if err != nil {
 				t.Error("Client err in set", "err", err)
 			}
 
 			t.Log("Getting value for client", i)
-			err = c.Get(context.Background(), fmt.Sprintf("name_%d", i))
+			err = c.Get(context.Background(), fmt.Sprintf("foo_%d", i))
 			if err != nil {
 				t.Error("Client err in get", "err", err)
 			}
@@ -59,7 +61,8 @@ func TestNewServerWithClients(t *testing.T) {
 
 	wg.Wait()
 
-	fmt.Println("Peers left ", len(server.Peers))
+	// Check if there is any peers left
+	slog.Info("Peers still connected", "No of Connected peers", len(server.Peers))
 
 	time.Sleep(time.Second)
 	if len(server.Peers) > 0 {

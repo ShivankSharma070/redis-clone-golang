@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
 
 	"github.com/tidwall/resp"
@@ -34,12 +35,15 @@ type ClientCommand struct {
 
 var QUIT = errors.New("Quit")
 
+// Parse resp command
+// Only Set, Get commands are handled
+// Hello and client commands are also handled but not implemented, they are just here to bypass official redis client checks.
 func parseCommand(reader io.Reader, p *Peer) (Command, error) {
 	rd := resp.NewReader(reader)
 	for {
 		v, _, err := rd.ReadValue()
 		if err == io.EOF {
-			// p.delChan <- p
+			p.delChan <- p
 			return nil, fmt.Errorf("End of file %w", QUIT)
 		}
 
@@ -47,8 +51,7 @@ func parseCommand(reader io.Reader, p *Peer) (Command, error) {
 			return nil, err
 		}
 
-		// TODO: Handle all types
-		fmt.Println("Command got", v.String())
+		slog.Info("Command received", "cmd", v.String())
 		switch v.Type() {
 		case resp.Array:
 			if len(v.Array()) == 0 {
@@ -57,12 +60,13 @@ func parseCommand(reader io.Reader, p *Peer) (Command, error) {
 
 			switch strings.ToLower(v.Array()[0].String()) {
 
+			// Quit or Exit will end the connection.
 			case "quit", "exit":
 				return nil, fmt.Errorf("Client requested %w", QUIT)
 
 			case CommandGet:
 				if len(v.Array()) != 2 {
-					return nil, fmt.Errorf("Not enough number of argument in the get command")
+					return nil, fmt.Errorf("Bad usage, set accept only 1 argument")
 				}
 				return GetCommand{
 					key: v.Array()[1].Bytes(),
@@ -70,7 +74,7 @@ func parseCommand(reader io.Reader, p *Peer) (Command, error) {
 
 			case CommandSet:
 				if len(v.Array()) != 3 {
-					return nil, fmt.Errorf("Not enough number of argument in the set command")
+					return nil, fmt.Errorf("Bad usage, get accept only 1 argument")
 				}
 				return SetCommand{
 					key:   v.Array()[1].Bytes(),
@@ -87,12 +91,15 @@ func parseCommand(reader io.Reader, p *Peer) (Command, error) {
 				}, nil
 
 			case CommandClient:
+				if len(v.Array()) < 3 {
+					return nil, fmt.Errorf("Bad usage, client needs at least 3 arguments.")
+				}
 				return ClientCommand{
 					value: v.Array()[1].Bytes(),
 				}, nil
 
 			default:
-				return nil, fmt.Errorf("Array, but unkown type of array.")
+				return nil, fmt.Errorf("Array, but unkown type .")
 			}
 		default:
 			return nil, fmt.Errorf("Unkown type of command.")
