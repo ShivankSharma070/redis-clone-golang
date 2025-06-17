@@ -1,10 +1,10 @@
-# 🧠 Go Redis Clone
+# Go Redis Clone
 
 A minimal Redis clone built from scratch in **Go** — just enough to power basic `SET` and `GET` commands, using the same RESP protocol that real Redis speaks. It’s fast, lightweight, and works out of the box with the official [Go Redis client](https://github.com/redis/go-redis). Perfect for learning how Redis works under the hood.
 
 ---
 
-## 🚀 What It Does
+##  What It Does
 
 This project mimics a small part of Redis by:
 
@@ -19,13 +19,13 @@ This project mimics a small part of Redis by:
 ## ✨ Features
 
 - ✅ `SET` and `GET` support with in-memory storage
-- 📡 RESP protocol parsing and encoding (bulk strings, arrays, simple strings, etc.)
-- 🤝 Works with official Redis clients
+-  RESP protocol parsing and encoding (bulk strings, arrays, simple strings, etc.)
+- Works with official Redis clients
 - Concurrent connections handling.
 
 ---
 
-## 🛠️ Setup
+## ️ Setup
 
 ### 1. Clone the repo
 
@@ -70,7 +70,7 @@ docker run -p 3000:3000 go-redis-clone --listenAddr :3000
 
 ---
 
-## 📡 Using the Go Redis Client
+##  Using the Go Redis Client
 
 Once the server is running, you can interact with it using the official Go Redis client:
 
@@ -99,7 +99,7 @@ func main() {
 
 ---
 
-## 📑 The RESP Protocol (Short Summary)
+##  The RESP Protocol (Short Summary)
 
 RESP is the protocol that Redis uses to talk to clients. It's super simple and human-readable:
 
@@ -119,7 +119,7 @@ This server parses and handles this, just like Redis would.
 
 ---
 
-## 📋 Makefile Commands
+##  Makefile Commands
 
 | Command            | Description                         |
 | ------------------ | ----------------------------------- |
@@ -142,7 +142,7 @@ This is a basic prototype meant for learning. Some things it **does not** do yet
 
 ---
 
-## 📖 Why I Built This
+##  Why I Built This
 
 Redis is a brilliant piece of software — simple in concept, blazing fast in practice. By building a tiny clone from scratch, I wanted to deeply understand:
 
@@ -155,10 +155,10 @@ This project helped me gain that insight, and I hope it helps you too.
 
 ---
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 This project was originally inspired by the following video tutorial:
 
-📺 [Building a Redis Clone in Go](https://www.youtube.com/watch?v=LMrxfWB6sbQ&t=2551s)
+[Building a Redis Clone in Go](https://www.youtube.com/watch?v=LMrxfWB6sbQ&t=2551s)
 
 All core logic and protocol implementation were based on that walkthrough. I've since modified, extended, and containerized the project to suit my own learning and understanding of how Redis works internally.
 
