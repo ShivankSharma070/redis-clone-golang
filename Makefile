@@ -1,5 +1,6 @@
+PORT ?= :5001
 run : build
-	@./bin/goredis --listenAddr :5001
+	@./bin/goredis --listenAddr ${PORT}
 
 build :
 	@go build -o bin/goredis
@@ -15,3 +16,6 @@ test-client: build
 		go test ./client -v -count=1; \
 		kill $$SERVER_PID; \
 	}
+
+clean: 
+	@rm -r bin/
