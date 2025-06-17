@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -24,15 +25,17 @@ func NewPeer(conn net.Conn, msgChan chan Message, delChan chan *Peer) *Peer {
 	}
 }
 
-func (p *Peer) Write(data []byte) (int, error) {
+func (p *Peer) Write(data string) {
 	buf := &bytes.Buffer{}
 	rw := resp.NewWriter(buf)
-	rw.WriteBytes(data)
-	fmt.Println(buf.String())
-	return p.conn.Write(buf.Bytes())
+	rw.WriteSimpleString(data)
+	_, err := p.conn.Write(buf.Bytes())
+	if err != nil {
+		slog.Error("Error sending data to client", "err", err, "data", data)
+	}
 }
 
-func (p *Peer) WriteMap(m map[string]string) {
+func (p *Peer) WriteMap(m map[string]string) error {
 	buf := &bytes.Buffer{}
 	buf.WriteString("%" + fmt.Sprintf("%d\r\n", len(m)))
 	rw := resp.NewWriter(buf)
@@ -40,25 +43,38 @@ func (p *Peer) WriteMap(m map[string]string) {
 		rw.WriteSimpleString(k)
 		rw.WriteSimpleString(v)
 	}
-	fmt.Println("This is the map we are sending", buf.String())
-	p.conn.Write(buf.Bytes())
+	_, err := p.conn.Write(buf.Bytes())
+	return err
 }
 
-func (p *Peer) readLoop() error {
+func (p *Peer) readLoop(ctx context.Context) error {
+	errChan := make(chan error)
+
+	runLoop := func() {
+		for {
+			command, err := parseCommand(p.conn, p)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			p.msgCh <- Message{
+				data: command,
+				peer: p,
+			}
+		}
+	}
+	go runLoop()
+
 	for {
-		command, err := parseCommand(p.conn, p)
-
-		if errors.Is(err, QUIT) {
-			return err
-		}
-
-		if err != nil {
-			slog.Error("Peer read error", "err", err)
-			continue
-		}
-		p.msgCh <- Message{
-			data: command,
-			peer: p,
+		select {
+		case <-ctx.Done():
+			return nil
+		case err := <-errChan:
+			if errors.Is(err, QUIT) || errors.Is(err, net.ErrClosed) {
+				return nil
+			}
+			slog.Error("peer read error", "err", err)
+			go runLoop()
 		}
 	}
 }
